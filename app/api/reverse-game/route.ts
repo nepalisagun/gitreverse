@@ -9,7 +9,7 @@ import { readGameReverse } from "@/lib/game-reverse-storage";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-const ROUTE_TIMEOUT_MS = 240_000;
+const ROUTE_TIMEOUT_MS = process.env.VERCEL ? 280_000 : 15 * 60_000;
 const inFlight = new Map<string, Promise<GameReverseResult>>();
 
 function encodeSse(event: string, data: unknown): string {

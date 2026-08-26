@@ -53,8 +53,7 @@ export function GameReverseHome() {
               into a prompt
             </h1>
             <p className="mt-4 max-w-xl text-lg text-zinc-600">
-              Type any game title and get a GAME.md spec plus a Cursor-ready
-              build prompt.
+              Type any game title and get a Cursor-ready build prompt.
             </p>
           </div>
 

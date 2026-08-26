@@ -10,8 +10,7 @@ type CodeRabbitBannerProps = {
   placement?:
     | "home-card"
     | "repo-card"
-    | "website-card"
-    | "library";
+    | "website-card";
 };
 
 const BANNER_COPY = {
@@ -26,11 +25,6 @@ const BANNER_COPY = {
     subtitle: "make sure you review the code using coderabbit",
     variant: "build",
   },
-  library: {
-    title: "Cut code review for free",
-    subtitle: "",
-    variant: "library",
-  },
 } as const;
 
 function copyForPlacement(
@@ -38,9 +32,6 @@ function copyForPlacement(
 ) {
   if (placement === "repo-card" || placement === "website-card") {
     return BANNER_COPY.build;
-  }
-  if (placement === "library") {
-    return BANNER_COPY.library;
   }
   return BANNER_COPY.default;
 }

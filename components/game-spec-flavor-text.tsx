@@ -18,7 +18,7 @@ const GAME_SPEC_FLAVOR_LINES = [
   "tuning arcade feel defaults",
   "drafting procedural world tiers",
   "checking genre fit",
-  "polishing GAME.md",
+  "polishing the spec",
   "almost done with the game spec",
 ] as const;
 

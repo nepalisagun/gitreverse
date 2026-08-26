@@ -55,13 +55,17 @@ export function ReversePromptHome({
   const resultsRef = useRef<HTMLDivElement | null>(null);
   const autoSubmitStartedRef = useRef(false);
 
-  /** Home: honor `?mode=website`; legacy `?mode=game` redirects to /game. */
+  /** Home: honor `?mode=website`; `?mode=game` redirects to /game. */
   useEffect(() => {
     if (!isHome || typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const mode = params.get("mode")?.trim().toLowerCase();
     if (mode === "game") {
       void router.replace("/game");
+      return;
+    }
+    if (mode === "3d") {
+      void router.replace("/3d");
       return;
     }
     if (mode === "website") {
@@ -116,8 +120,8 @@ export function ReversePromptHome({
   }, []);
 
   function setHomeModeAndUrl(next: "codebase" | "website") {
-    setHomeMode(next);
     setError(null);
+    setHomeMode(next);
     if (typeof window === "undefined" || !isHome) return;
     const url = new URL(window.location.href);
     if (next === "website") {
@@ -313,13 +317,7 @@ export function ReversePromptHome({
                 a prompt
               </h1>
               <p className="mt-4 max-w-xl text-lg text-zinc-600">
-                Reverse engineer any codebase or website into a prompt.{" "}
-                <Link
-                  href="/game"
-                  className="font-medium text-zinc-800 underline decoration-zinc-400 underline-offset-2 hover:text-zinc-950"
-                >
-                  Games too.
-                </Link>
+                Reverse engineer any codebase or website into a prompt.
               </p>
             </div>
           ) : owner && repo ? (

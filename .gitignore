@@ -47,5 +47,8 @@ next-env.d.ts
 # website reverse test output
 .website-reverse/
 
+# generated Meshy GLBs (game reverse + 3D reverse)
+/data/
+
 # caddy azure deploy spec (contains storage keys / ACR passwords)
 caddy/aci.yaml

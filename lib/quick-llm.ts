@@ -13,8 +13,9 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const XAI_URL = "https://api.x.ai/v1/chat/completions";
 const GOOGLE_AI_STUDIO_URL =
   "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+const APISMART_URL = "https://gw.apismart.ai/v1/chat/completions";
 
-export type LlmProvider = "openrouter" | "grok" | "azure" | "google";
+export type LlmProvider = "openrouter" | "grok" | "azure" | "google" | "apismart";
 
 export type LlmTarget = {
   provider: LlmProvider;
@@ -77,20 +78,31 @@ function googleTargetFromApiKey(apiKey: string): LlmTarget {
   };
 }
 
+function apismartTargetFromApiKey(apiKey: string): LlmTarget {
+  return {
+    provider: "apismart",
+    url: APISMART_URL,
+    apiKey,
+    model: process.env.APISMART_MODEL?.trim() || "DEEPSEEK_V4_FLASH",
+  };
+}
+
 function resolveLlmTargetAuto(
   xaiKey: string | undefined,
   openRouterKey: string | undefined,
   azureKey: string | undefined,
   azureBaseUrl: string | undefined,
-  googleKey: string | undefined
+  googleKey: string | undefined,
+  apismartKey: string | undefined
 ): LlmTarget | { error: string } {
   if (xaiKey) return grokTargetFromApiKey(xaiKey);
   if (openRouterKey) return openRouterTargetFromApiKey(openRouterKey);
   if (azureKey && azureBaseUrl) return azureTargetFromEnv();
   if (googleKey) return googleTargetFromApiKey(googleKey);
+  if (apismartKey) return apismartTargetFromApiKey(apismartKey);
   return {
     error:
-      "No LLM API key configured. Set GITREVERSE_QUICK_LLM and the matching key(s), or leave GITREVERSE_QUICK_LLM unset (auto) and set one of: XAI_API_KEY, OPENROUTER_API_KEY, AZURE_OPENAI_API_KEY + AZURE_OPENAI_BASE_URL, GOOGLE_GENERATIVE_AI_API_KEY.",
+      "No LLM API key configured. Set GITREVERSE_QUICK_LLM and the matching key(s), or leave GITREVERSE_QUICK_LLM unset (auto) and set one of: XAI_API_KEY, OPENROUTER_API_KEY, AZURE_OPENAI_API_KEY + AZURE_OPENAI_BASE_URL, GOOGLE_GENERATIVE_AI_API_KEY, APISMART_API_KEY.",
   };
 }
 
@@ -103,6 +115,7 @@ export function resolveLlmTarget(): LlmTarget | { error: string } {
   const azureKey = getAzureOpenAiApiKey() ?? undefined;
   const azureBaseUrl = getAzureOpenAiBaseUrl() ?? undefined;
   const googleKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim();
+  const apismartKey = process.env.APISMART_API_KEY?.trim();
 
   if (mode === "auto") {
     return resolveLlmTargetAuto(
@@ -110,15 +123,16 @@ export function resolveLlmTarget(): LlmTarget | { error: string } {
       openRouterKey,
       azureKey,
       azureBaseUrl,
-      googleKey
+      googleKey,
+      apismartKey
     );
   }
 
-  const valid = new Set(["grok", "openrouter", "azure", "google"]);
+  const valid = new Set(["grok", "openrouter", "azure", "google", "apismart"]);
   if (!valid.has(mode)) {
     return {
       error:
-        "Invalid GITREVERSE_QUICK_LLM. Use grok, openrouter, azure, google, or auto.",
+        "Invalid GITREVERSE_QUICK_LLM. Use grok, openrouter, azure, google, apismart, or auto.",
     };
   }
 
@@ -151,6 +165,14 @@ export function resolveLlmTarget(): LlmTarget | { error: string } {
         };
       }
       return googleTargetFromApiKey(googleKey);
+    case "apismart":
+      if (!apismartKey) {
+        return {
+          error:
+            "GITREVERSE_QUICK_LLM=apismart requires APISMART_API_KEY in .env.local.",
+        };
+      }
+      return apismartTargetFromApiKey(apismartKey);
   }
 }
 
@@ -164,6 +186,8 @@ function providerDisplayName(p: LlmProvider): string {
       return "Azure OpenAI";
     case "google":
       return "Google AI Studio";
+    case "apismart":
+      return "ApiSmart";
     default: {
       const _exhaustive: never = p;
       return _exhaustive;
@@ -346,7 +370,9 @@ export async function callQuickLlm(
           ? "xAI Grok authentication failed. Check XAI_API_KEY in .env.local."
           : llm.provider === "azure"
             ? "Azure OpenAI authentication failed. Check AZURE_OPENAI_API_KEY and AZURE_OPENAI_BASE_URL in .env.local."
-            : "Google AI Studio authentication failed. Check GOOGLE_GENERATIVE_AI_API_KEY in .env.local.";
+            : llm.provider === "apismart"
+              ? "ApiSmart authentication failed. Check APISMART_API_KEY in .env.local."
+              : "Google AI Studio authentication failed. Check GOOGLE_GENERATIVE_AI_API_KEY in .env.local.";
     return {
       ok: false,
       error: isAuth ? authHint : `Generation failed: ${msg}`,

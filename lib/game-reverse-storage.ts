@@ -4,6 +4,7 @@ export type GameReverseMeta = {
   gameName: string;
   prompt: string;
   updatedAt: string;
+  metadata: Record<string, unknown> | null;
 };
 
 export async function readGameReverse(
@@ -14,7 +15,7 @@ export async function readGameReverse(
 
   const { data, error } = await supabase
     .from("game_reverse_cache")
-    .select("game_name, prompt, spec_md, cached_at")
+    .select("game_name, prompt, spec_md, cached_at, metadata")
     .eq("slug", slug)
     .maybeSingle();
 
@@ -28,6 +29,7 @@ export async function readGameReverse(
       gameName: data.game_name as string,
       prompt: data.prompt as string,
       updatedAt: data.cached_at as string,
+      metadata: (data.metadata as Record<string, unknown> | null) ?? null,
     },
   };
 }

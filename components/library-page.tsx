@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { CodeRabbitBanner } from "@/components/coderabbit-banner";
 import { Navbar } from "@/components/navbar";
 import type { LibraryEntry, SortOption } from "@/lib/library-types";
 
@@ -218,7 +217,22 @@ export function LibraryPage({ initialData, initialTotal }: LibraryPageProps) {
           )}
         </div>
 
-        <CodeRabbitBanner className="w-full" placement="library" />
+        <a
+          href="https://filiksyos.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group relative block w-full"
+        >
+          <div className="absolute inset-0 translate-x-1 translate-y-1 rounded-lg bg-zinc-900" />
+          <div className="relative z-10 flex items-center gap-3 rounded-lg border-[3px] border-zinc-900 bg-white px-4 py-3 transition-transform group-hover:-translate-x-px group-hover:-translate-y-px">
+            <p className="min-w-0 flex-1 truncate text-sm font-semibold text-zinc-900">
+              Follow the founder who built GitReverse
+            </p>
+            <span className="shrink-0 rounded border-[2px] border-zinc-900 bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white">
+              Follow
+            </span>
+          </div>
+        </a>
 
         {/* Count line */}
         {search ? (

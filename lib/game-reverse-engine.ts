@@ -12,6 +12,12 @@ import {
   specApiPath,
   writeGameReverse,
 } from "@/lib/game-reverse-storage";
+import {
+  appendGeneratedAssetsSection,
+  appendHeroAssetInstructions,
+  generateHeroAssets,
+} from "@/lib/game-hero-assets";
+import { readHeroAssetManifest } from "@/lib/game-asset-storage";
 
 export type GameReverseResult =
   | {
@@ -99,13 +105,24 @@ export async function ensureGameReversed(opts: {
   if (!force) {
     const cached = await readGameReverse(slug);
     if (cached) {
-      const prompt = appendGameSpecLink(cached.meta.prompt, slug);
-      if (prompt !== cached.meta.prompt) {
+      const assets = (await readHeroAssetManifest(slug))?.assets ?? [];
+      const withAssets = appendHeroAssetInstructions(
+        cached.meta.prompt,
+        slug,
+        assets
+      );
+      const prompt = appendGameSpecLink(withAssets, slug);
+      const specMd =
+        assets.length > 0
+          ? appendGeneratedAssetsSection(cached.specMd, slug, assets)
+          : cached.specMd;
+      if (prompt !== cached.meta.prompt || specMd !== cached.specMd) {
         void writeGameReverse({
           slug,
           gameName: cached.meta.gameName,
-          specMd: cached.specMd,
+          specMd,
           prompt,
+          metadata: cached.meta.metadata,
         }).catch((e) => {
           console.warn(
             `[reverse-game] failed to heal spec link for ${slug}:`,
@@ -116,7 +133,7 @@ export async function ensureGameReversed(opts: {
       return {
         ok: true,
         prompt,
-        specMd: cached.specMd,
+        specMd,
         specPath: specApiPath(slug),
         fromCache: true,
       };
@@ -147,7 +164,7 @@ export async function ensureGameReversed(opts: {
   }
 
   onStatus?.("Understanding mechanics");
-  onStatus?.("Writing GAME.md");
+  onStatus?.("Writing the spec");
   const specStartedAt = Date.now();
   const specResult = await callQuickLlm(
     llm,
@@ -164,6 +181,21 @@ export async function ensureGameReversed(opts: {
 
   onStatus?.("Reverse engineering prompt");
   const promptStartedAt = Date.now();
+  const meshyBudgetMs = process.env.VERCEL ? 200_000 : 12 * 60_000;
+  const heroPromise = generateHeroAssets({
+    llm,
+    slug,
+    gameName,
+    specMd: specResult.text,
+    deadlineAt: Date.now() + meshyBudgetMs,
+    onStatus,
+  }).catch((e) => {
+    console.warn(
+      `[reverse-game] hero assets failed:`,
+      e instanceof Error ? e.message : e
+    );
+    return [];
+  });
   const promptResult = await callQuickLlm(
     llm,
     GAME_REVERSE_SYSTEM_PROMPT,
@@ -178,19 +210,28 @@ export async function ensureGameReversed(opts: {
     `[reverse-game] prompt elapsed=${Date.now() - promptStartedAt}ms`
   );
   if (!promptResult.ok) {
+    void heroPromise;
     return { ok: false, error: promptResult.error, status: promptResult.status };
   }
 
-  const finalPrompt = appendGameSpecLink(promptResult.text, slug);
+  const heroAssets = await heroPromise;
+  const specMd = appendGeneratedAssetsSection(specResult.text, slug, heroAssets);
+  const finalPrompt = appendGameSpecLink(
+    appendHeroAssetInstructions(promptResult.text, slug, heroAssets),
+    slug
+  );
   console.log(`[reverse-game] TOTAL elapsed=${Date.now() - requestStartedAt}ms`);
 
   try {
     await writeGameReverse({
       slug,
       gameName,
-      specMd: specResult.text,
+      specMd,
       prompt: finalPrompt,
-      metadata: evidence.metadata ?? null,
+      metadata: {
+        ...(evidence.metadata ?? {}),
+        heroAssets,
+      },
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -204,7 +245,7 @@ export async function ensureGameReversed(opts: {
   return {
     ok: true,
     prompt: finalPrompt,
-    specMd: specResult.text,
+    specMd,
     specPath: specApiPath(slug),
     fromCache: false,
   };
